@@ -9,22 +9,29 @@ __global__ void saxpy(int n, float a, float *x, float *y)
 int main(void)
 {
     int N = 1<<20;
-    float *x, *y, *d_x, *d_y;
-    x = (float*)malloc(N*sizeof(float));
-    y = (float*)malloc(N*sizeof(float));
 
+    float *x, *y, *d_x, *d_y;
+
+    // allocating memory for host memory
+    x = (float*)malloc(N*sizeof(float)); // host array
+    y = (float*)malloc(N*sizeof(float)); // host array
+
+    // allocating memory for device memory
     cudaMalloc(&d_x, N*sizeof(float)); 
     cudaMalloc(&d_y, N*sizeof(float));
 
+    // initializing device memory
     for (int i = 0; i < N; i++) {
         x[i] = 1.0f;
         y[i] = 2.0f;
     }
 
+    // copying host memory to devloce memory
     cudaMemcpy(d_x, x, N*sizeof(float), cudaMemcpyHostToDevice);
     cudaMemcpy(d_y, y, N*sizeof(float), cudaMemcpyHostToDevice);
 
     // Perform SAXPY on 1M elements
+    // <<<thread blocks per grid / threads per block>>> 
     saxpy<<<(N+255)/256, 256>>>(N, 2.0f, d_x, d_y);
 
     cudaMemcpy(y, d_y, N*sizeof(float), cudaMemcpyDeviceToHost);
