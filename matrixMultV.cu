@@ -70,17 +70,18 @@ void initialize(float* arr, int size)
 }
 
 void validate(float *a, float *b, float *c, int n){
-    // serial implementation
-    for (size_t i = 0; i < n; i++){ // rows
-        for (size_t j = 0; j < n; j++){ // columns
-            int temp = 0;
-            for (size_t k = 0; k < n; k++){
-                temp += a[i*n+k] * b[k*n+j];
-            }
-            // Check against the CPU result
-            assert(temp == c[i * n + j]);
-        }
-    }
+    	// serial implementation
+    	for (size_t i = 0; i < n; i++){ // rows
+        	for (size_t j = 0; j < n; j++){ // columns
+            		int temp = 0;
+            		for (size_t k = 0; k < n; k++){
+                		temp += a[i*n+k] * b[k*n+j];
+            		}
+            		// Check against the CPU result
+            		assert(temp == c[i * n + j]);
+        		}
+    	}
+	printf("Answer Validated\n");
 }
 
 int main(void) 
@@ -89,9 +90,9 @@ int main(void)
 	int Width = X;
 
 	// Allocate and initialize the matrices M, N, P
-	float Mh[matrixSize];
-	float Nh[matrixSize];
-	float Ph[matrixSize];
+	float* Mh = (float*)malloc(matrixSize*sizeof(float));
+	float* Nh = (float*)malloc(matrixSize*sizeof(float));
+	float* Ph = (float*)malloc(matrixSize*sizeof(float));
 
 	// I/O to read the input matrices M and N
 	initialize(Mh, matrixSize);
@@ -101,13 +102,18 @@ int main(void)
 
 	// I/O to write the output matrix P
     	puts("CPU: Validating...");
-    	for (size_t i = 0; i < X; i++) {
-	    for (size_t j = 0; j < X; i++) 
-	    {
-	        std::cout << Ph[i*X+j] << " ";
-    	    }
- 	    std::cout << std::endl;
-    	}
+    	int counter = 0;
+	for (int i = 0; i < matrixSize; i++)
+	{
+		if (counter == X)  
+		{
+			counter = 0;
+			printf("\n");
+		}
+		printf("%.2f ", Ph[i]);
+		counter++;
+	}
+	printf("\n");
     
     	validate(Mh, Nh, Ph, X);
 	delete[] Mh; delete[] Nh; delete[] Ph;
