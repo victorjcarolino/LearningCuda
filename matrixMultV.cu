@@ -13,6 +13,13 @@ __global__ void MatrixMultiplication(float* M, float* N, float* P, int Width)
 	int size = Width * Width * sizeof(float);
 	float* Md, Nd, Pd;
 	
+	// 2D Thread ID
+	int tx = threadIdx.x;
+	int ty = threadIdx.y;
+
+	// product stores the Pd element that is computed by the thread
+	float product = 0;
+
 	// Allocate device memory for M, N, and P
 	cudaMalloc((void**)Md, size);
 	cudaMalloc((void**)Nd, size);
@@ -24,6 +31,15 @@ __global__ void MatrixMultiplication(float* M, float* N, float* P, int Width)
 	cudaMemcpy(Pd, P, size, cudaMemcpyHostToDevice);
 
 	// Kernel invocation code - to have the device to perform the actual matrix multiplication
+	for (int i = 0; i < Width; ++i)
+	{
+		float MdElement = Md[ty * Width + i]; // incrementing horizontally on a 2d rep.
+		float NdElement = Nd[i * Width + tx]; // incrementing downwards on a 2d rep.
+		product += MdElement * NdElement;
+	}
+
+	// Write the matrix to device memory each thread writes one element
+	Pd[ty * Width + tx] = product;
 
 	// copy P from the device memory
 	cudaMemcpy(P, Pd, size, cudaMemcpyDeviceToHost);
