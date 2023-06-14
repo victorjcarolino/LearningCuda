@@ -6,10 +6,12 @@
 #include <fstream>
 #include <string>
 
-#define N 1024 // size for N x N matrices
+#define X 4 // size for N x N matrices
+
+using namespace std;
 		
 // Matrix multiplication kernel - thread specification
-__global__ void MatrixMulKernel(float* Md, float* Nd, float *Pd, int Width)
+__global__ void MatrixMulKernel(float* Md, float* Nd, float* Pd, int Width)
 {
 	// product stores the Pd element that is computed by the thread
 	float product = 0;
@@ -32,7 +34,7 @@ __global__ void MatrixMulKernel(float* Md, float* Nd, float *Pd, int Width)
 void MatrixMultiplication(float* M, float* N, float* P, int Width) 
 {
 	int size = Width * Width * sizeof(float);
-	float* Md,*Nd, *Pd;
+	float *Md, *Nd, *Pd;
 	
 	// Allocate device memory for M, N, and P
 	cudaMalloc(&Md, size);
@@ -59,45 +61,55 @@ void MatrixMultiplication(float* M, float* N, float* P, int Width)
 	cudaFree(Md); cudaFree(Nd); cudaFree(Pd); 
 }
 
-float* initialize(float* arr, int size) 
+void initialize(float* arr, int size) 
 {
 	for (int i = 0; i < size; i++) 
 	{
 		arr[i] = 1.0f;
 	}
-	return arr;
 }
 
-void validate()
-{
+void validate(float *a, float *b, float *c, int n){
+    // serial implementation
+    for (size_t i = 0; i < n; i++){ // rows
+        for (size_t j = 0; j < n; j++){ // columns
+            int temp = 0;
+            for (size_t k = 0; k < n; k++){
+                temp += a[i*n+k] * b[k*n+j];
+            }
+            // Check against the CPU result
+            assert(temp == c[i * n + j]);
+        }
+    }
 }
 
 int main(void) 
 {
-	int matrixSize = N * N;
-	int Width = N;
+	int matrixSize = X * X;
+	int Width = X;
 
 	// Allocate and initialize the matrices M, N, P
-	float Mh[N * N * sizeof(float)];
-	float Nh[N * N * sizeof(float)];
-	float Ph[N * N * sizeof(float)];
+	float Mh[matrixSize];
+	float Nh[matrixSize];
+	float Ph[matrixSize];
 
 	// I/O to read the input matrices M and N
-	Mh = initialize(Mh, matrixSize);
-	Nh = initialize(Nh, matrixSize);
-	Ph = initialize(Ph, matrixSize);
-
-	// M * N on the device
+	initialize(Mh, matrixSize);
+	initialize(Nh, matrixSize);
+	std::cout << "test" << std::endl;
 	MatrixMultiplication(Mh, Nh, Ph, Width);
 
 	// I/O to write the output matrix P
-	int counter = 0;
-	for (int i = 0; i < matrixSize; i++)
-	{
-		if (counter == N)  
-			printf("/n");
-		printf(%f, Ph[i]);
-		counter++;
-	}
+    	puts("CPU: Validating...");
+    	for (size_t i = 0; i < X; i++) {
+	    for (size_t j = 0; j < X; i++) 
+	    {
+	        std::cout << Ph[i*X+j] << " ";
+    	    }
+ 	    std::cout << std::endl;
+    	}
+    
+    	validate(Mh, Nh, Ph, X);
+	delete[] Mh; delete[] Nh; delete[] Ph;
 	return 0;
 }
