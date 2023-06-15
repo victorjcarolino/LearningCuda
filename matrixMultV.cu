@@ -7,6 +7,7 @@
 #include <string>
 
 #define X 4 // size for N x N matrices
+#define TILE_WIDTH 4 // size for the tiles
 
 using namespace std;
 		
@@ -16,19 +17,19 @@ __global__ void MatrixMulKernel(float* Md, float* Nd, float* Pd, int Width)
 	// product stores the Pd element that is computed by the thread
 	float product = 0;
 
-	// 2D Thread ID
-	int tx = threadIdx.x;
-	int ty = threadIdx.y;
+	// Calculate the row index of the Pd element and M
+	int row = blockIdx.y * TILE_WIDTH + threadIdx.y;
+	int col = blockIdx.x * TILE_WIDTH + threadIdx.x;
 
 	for (int i = 0; i < Width; ++i)
 	{
-		float MdElement = Md[ty * Width + i]; // incrementing horizontally on a 2d rep.
-		float NdElement = Nd[i * Width + tx]; // incrementing downwards on a 2d rep.
+		float MdElement = Md[row * Width + i]; // incrementing horizontally on a 2d rep.
+		float NdElement = Nd[i * Width + col]; // incrementing downwards on a 2d rep.
 		product += MdElement * NdElement;
 	}
 
 	// Write the matrix to device memory each thread writes one element
-	Pd[ty * Width + tx] = product;
+	Pd[row * Width + col] = product;
 }
 
 void MatrixMultiplication(float* M, float* N, float* P, int Width) 
@@ -48,8 +49,8 @@ void MatrixMultiplication(float* M, float* N, float* P, int Width)
 
 	// Kernel invocation code - to have the device to perform the actual matrix multiplication
 	// Setup the execution configuration
-	dim3 dimBlock(Width, Width);
-	dim3 dimGrid(1,1);
+	dim3 dimBlock(TILE_WIDTH, TILE_WIDTH);
+	dim3 dimGrid(Width/TILE_WIDTH, Width/TILE_WIDTH);
 
 	// Launch the device computation threads
 	MatrixMulKernel<<<dimGrid, dimBlock>>>(Md,Nd,Pd,Width);
