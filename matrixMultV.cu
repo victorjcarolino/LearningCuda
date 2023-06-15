@@ -6,29 +6,41 @@
 #include <fstream>
 #include <string>
 
-#define X 4 // size for N x N matrices
-#define TILE_WIDTH 4 // size for the tiles
+#define X 16 // size for N x N matrices
+#define TILE_WIDTH 2 // size for the tiles
 
 using namespace std;
 		
 // Matrix multiplication kernel - thread specification
 __global__ void MatrixMulKernel(float* Md, float* Nd, float* Pd, int Width)
 {
-	// product stores the Pd element that is computed by the thread
+	
+	__shared__ float Mds[TILE_WIDTH][TILE_WIDTH]; // shared array of Md elements to lessen global mem accesses
+	__shared__ float Nds[TILE_WIDTH][TILE_WIDTH]; // shared array of Nd elements to lessen global mem accesses
+	
+	int bx = blockIdx.x;
+	int by = blockIdx.y;
+	int tx = threadIdx.x;
+	int ty = threadIdx.y;
+
+	// Identify the row and column of the Pd element to work on
+	int row = by * TILE_WIDTH + ty;
+	int col = bx * TILE_WIDTH + tx;
+
 	float product = 0;
 
-	// Calculate the row index of the Pd element and M
-	int row = blockIdx.y * TILE_WIDTH + threadIdx.y;
-	int col = blockIdx.x * TILE_WIDTH + threadIdx.x;
-
-	for (int i = 0; i < Width; ++i)
+	// Loop over the Md and Nd tiles requried to compute the Pd element
+	for (int i = 0; i < Width/TILE_WIDTH; ++i) 
 	{
-		float MdElement = Md[row * Width + i]; // incrementing horizontally on a 2d rep.
-		float NdElement = Nd[i * Width + col]; // incrementing downwards on a 2d rep.
-		product += MdElement * NdElement;
+		// Collaborative loading of Md and Nd tiles into shared memory
+		Mds[ty][tx] = Md[row * Width + (i * TILE_WIDTH + ty)];
+		Nds[ty][tx] = Nd[(i * TILE_WIDTH + ty) * Width + col];
+		__syncthreads();
+		
+		for (int j = 0; j < TILE_WIDTH; ++j)
+			product += Mds[ty][j] * Nds[j][tx];
+		__syncthreads();
 	}
-
-	// Write the matrix to device memory each thread writes one element
 	Pd[row * Width + col] = product;
 }
 
